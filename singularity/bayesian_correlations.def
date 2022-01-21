@@ -1,0 +1,63 @@
+BootStrap: debootstrap
+OSVersion: stable 
+MirrorURL: http://deb.debian.org/debian
+
+%setup
+
+%files
+
+    # ---------------------------
+    # copy source files from host
+    # ---------------------------
+    
+    $PWD/src /src
+    
+%environment
+    export LC_ALL=C
+
+%post
+
+    # ------------------------------
+    # make sure system is up to date
+    # ------------------------------
+    
+    apt update && apt upgrade -y
+    
+    # ---------------------------
+    # install system requirements
+    # ---------------------------
+
+    apt install -y \
+    gnupg software-properties-common
+
+    # -------------------------------------
+    # install R and associated dependencies
+    # -------------------------------------
+  
+    # import proper key 
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-key '95C0FAF38DB3CCAD0C080A7BDC78B2DDEABC47B7'
+      
+    # add repository
+    echo "deb http://cloud.r-project.org/bin/linux/debian bullseye-cran40/" | tee -a /etc/apt/sources.list
+     
+    # install
+    apt update && apt install -y \
+    r-base
+
+    # packages required for certain R libraries
+    apt install -y \
+    libv8-dev libxml2-dev libcurl4-openssl-dev libopenblas-dev
+   
+    # ------------------
+    # install R packages
+    # ------------------
+
+    R --slave -e 'install.packages(c("rstan", "data.table", "tidybayes", "MASS", "dplyr"))'
+    R --slave -e 'install.packages("openblasctl", repos = "https://hpcran.org")'
+
+%runscript
+
+    Rscript /src/r/run_sim.R "${@}"
+
+%labels
+    Author Carl Delfin, 2021
